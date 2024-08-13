@@ -1,15 +1,33 @@
+function root2midi(note) {
+    if ("EbE#FbF#GbG#AbA#BbB#".indexOf(note) >= 0) {
+        return Tone.Frequency(note+"3").toMidi();
+    }
+    else {
+        return Tone.Frequency(note+"4").toMidi();
+    }
+}
+
 const Chord = class {
+    /*
     static root2midi = {
         "Eb":51,
         "F":53,
         "Ab":56,
         "Bb":58
     };
+    */
 
     static chordQuality2delta = {
+        "maj":[0,4,7],
+        "min":[0,3,7],
+        "dim":[0,3,6],
+        "aug":[0,4,8],
+
         "min7":[0,3,7,10],
         "7":[0,4,7,10],
-        "maj7":[0,4,7,11]
+        "maj7":[0,4,7,11],
+        "halfdim7":[0,3,6,10],
+        "dim7":[0,3,6,9],
     };
 
     constructor(root, quality, numMeasures) {
@@ -19,27 +37,25 @@ const Chord = class {
         this.notes = [];
         this.midi = [];
         var deltas = Chord.chordQuality2delta[this.quality];
-        for (let index in deltas) {
-            var noteMidi = deltas[index]+Chord.root2midi[this.root]
-            this.midi.push(noteMidi);
+        const midiRoot = root2midi(this.root);
+        for (const d of deltas) {
+            var noteMidi = d+midiRoot;
             this.notes.push(Tone.Frequency(noteMidi,"midi").toNote());
         }
+        console.log(this.midi);
     }
 };
 
 
-
-
 function improvise(userInput) {
-    /*
-    if (chordIndex >= 0)
-    {
-        polySynth.triggerAttackRelease(chords[chordIndex][0],'16n');
-        polySynth.triggerAttackRelease(chords[chordIndex][1],'16n','+8n');
-        polySynth.triggerAttackRelease(chords[chordIndex][2],'16n','+4n');
-    }
+    /* 
+    ideas: 
+    - make comping part have inversions
+    - complete root2midi and chordQuality2delta
+    - try different instruments (other than synths) such as piano
+    - port the python ideas into here
+    - toggle button instead of one play button AND one stop button
     */
-    // idea: make comping part have inversions
 }
 var editor = ace.edit('editor');
 editor.setTheme('ace/theme/monokai');
@@ -65,8 +81,8 @@ polySynth.connect(vol);
 p1.connect(vol);
 
 var seq;
+var tempo = 300;
 function go() {
-    //polySynth.triggerAttackRelease('C4','16n')
     eval(editor.getValue());
     console.log(chordInput);
     var numEighths = 0;
@@ -81,21 +97,20 @@ function go() {
     }
 
     Tone.context.latencyHint = 'fastest';
-    Tone.Transport.bpm.value = 120;
+    Tone.Transport.bpm.value = tempo;
     seq = new Tone.Sequence(function(time, idx)
     {
         for (let i=0; i < chordInput.length; i++) {
             if (hits[i] === idx) {
-                for (let n = 0; n < chordInput[i].numMeasures; n++) {
-                    console.log(hits[i]);
-                    console.log(chordInput[i].notes);
-                    console.log(chordInput[i].midi);
-                    const chordNotes = chordInput[i].notes
-                    const now = Tone.now();
-                    for (let j = 0; j < chordNotes.length; j++) {
-                        polySynth.triggerAttackRelease(chordNotes[j],'1n');
-                    }
-                }
+                console.log(hits[i]);
+                console.log(`${root2midi(chordInput[i].root)} still don't see it?!`);
+                console.log(chordInput[i].notes);
+                console.log(chordInput[i].midi);
+                const chordNotes = chordInput[i].notes
+                const now = Tone.now();
+                for (let j = 0; j < chordNotes.length; j++) {
+                    polySynth.triggerAttackRelease(chordNotes[j],'2n');
+                } 
             }
         }
     }, eighths, '8n');
