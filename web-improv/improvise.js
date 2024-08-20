@@ -59,7 +59,7 @@ const Chord = class {
         var midiOctaves = [...this.midi];
         for (let n of this.midi) {
             midiOctaves.push(n+12);
-            midiOctaves.push(n+24);
+            //midiOctaves.push(n+24);
         }
         midiOctaves.sort();
         var melodyNotes = [];
@@ -85,8 +85,10 @@ editor.setTheme('ace/theme/monokai');
 editor.getSession().setMode('ace/mode/javascript');
 editor.setOptions({fontSize: '20pt'});
 
-var vol = new Tone.Volume(-12).toMaster();
-var polySynth = new Tone.PolySynth(8, Tone.FMSynth);
+var chordVol = new Tone.Volume(-15).toMaster();
+var chordPlayer = new Tone.PolySynth(8, Tone.FMSynth);
+var melodyVol = new Tone.Volume(-8).toMaster();
+var melodyPlayer = new Tone.PolySynth(1, Tone.FMSynth);
 /*
 var reverb = new tone.Freeverb(0.4).connect(vol);
 var vibrato = new Tone.Vibrato(3,0.3).connect(reverb);
@@ -100,8 +102,9 @@ var p1 = new Tone.Players({
     // console.log('loaded');
 });
 
-polySynth.connect(vol);
-p1.connect(vol);
+chordPlayer.connect(chordVol);
+melodyPlayer.connect(melodyVol);
+// p1.connect(vol); note: vol is no longe defined
 
 var seq;
 var tempo = 300;
@@ -109,9 +112,10 @@ function go() {
     eval(editor.getValue());
     console.log(chordInput);
     var melody = new Melody(chordInput);
-    console.log(melody.create_melody());
+    var aTune = melody.create_melody()
+    console.log(aTune);
     var numEighths = 0;
-    var hits = [];
+    var hits = []; // on which 8th notes each chord should play
     for (let c of chordInput) {
         hits.push(numEighths);
         numEighths += c.numMeasures*8;
@@ -125,6 +129,7 @@ function go() {
     Tone.Transport.bpm.value = tempo;
     seq = new Tone.Sequence(function(time, idx)
     {
+        melodyPlayer.triggerAttackRelease(aTune[idx],'8n');
         for (let i=0; i < chordInput.length; i++) {
             if (hits[i] === idx) {
                 console.log(hits[i]);
@@ -134,8 +139,8 @@ function go() {
                 const chordNotes = chordInput[i].notes
                 const now = Tone.now();
                 for (let j = 0; j < chordNotes.length; j++) {
-                    polySynth.triggerAttackRelease(chordNotes[j],'2n');
-                } 
+                    chordPlayer.triggerAttackRelease(chordNotes[j],'2n');
+                }
             }
         }
     }, eighths, '8n');
