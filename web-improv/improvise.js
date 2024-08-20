@@ -7,16 +7,26 @@ function root2midi(note) {
     }
 }
 
-const Chord = class {
-    /*
-    static root2midi = {
-        "Eb":51,
-        "F":53,
-        "Ab":56,
-        "Bb":58
-    };
-    */
+const Melody = class {
+    constructor(chords) {
+        this.chords = chords;
+    }
 
+    create_melody() {
+        var melodyNotes = [];
+        for (let chord of this.chords) {
+            melodyNotes = melodyNotes.concat(chord.create_melody());
+        }
+        return melodyNotes;
+    }
+};
+
+function random_choice(arr) {
+    const rand = Math.floor(Math.random()*arr.length);
+    return arr[rand];
+}
+
+const Chord = class {
     static chordQuality2delta = {
         "maj":[0,4,7],
         "min":[0,3,7],
@@ -40,12 +50,25 @@ const Chord = class {
         const midiRoot = root2midi(this.root);
         for (const d of deltas) {
             var noteMidi = d+midiRoot;
+            this.midi.push(noteMidi);
             this.notes.push(Tone.Frequency(noteMidi,"midi").toNote());
         }
-        console.log(this.midi);
+        console.log(`this.midi = ${this.midi}`);
+    }
+    create_melody() {
+        var midiOctaves = [...this.midi];
+        for (let n of this.midi) {
+            midiOctaves.push(n+12);
+            midiOctaves.push(n+24);
+        }
+        midiOctaves.sort();
+        var melodyNotes = [];
+        for (let i = 0; i < this.numMeasures*8; i++) {
+            melodyNotes.push(Tone.Frequency(random_choice(midiOctaves),"midi").toNote());
+        }
+        return melodyNotes;
     }
 };
-
 
 function improvise(userInput) {
     /* 
@@ -85,6 +108,8 @@ var tempo = 300;
 function go() {
     eval(editor.getValue());
     console.log(chordInput);
+    var melody = new Melody(chordInput);
+    console.log(melody.create_melody());
     var numEighths = 0;
     var hits = [];
     for (let c of chordInput) {
