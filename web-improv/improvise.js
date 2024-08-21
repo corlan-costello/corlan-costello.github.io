@@ -47,16 +47,40 @@ const Chord = class {
         this.notes = [];
         this.midi = [];
         var deltas = Chord.chordQuality2delta[this.quality];
-        const midiRoot = root2midi(this.root);
+        this.midiRoot = root2midi(this.root);
         for (const d of deltas) {
-            var noteMidi = d+midiRoot;
+            var noteMidi = d+this.midiRoot;
             this.midi.push(noteMidi);
             this.notes.push(Tone.Frequency(noteMidi,"midi").toNote());
         }
         console.log(`this.midi = ${this.midi}`);
     }
     create_melody() {
-        var midiOctaves = [...this.midi];
+        return this.create_random_melody();
+    }
+    jazzify() {
+        let ninth;
+        let thirteenth;
+        var jazzyMidi = [...this.midi];
+        if (this.quality == '7') {
+            ninth = random_choice([this.midiRoot+1,this.midiRoot+2]);
+            thirteenth = this.midiRoot+9;
+            if (ninth == this.midiRoot+1) {
+                thirteenth = random_choice([this.midiRoot+8,this.midiRoot+9]);
+            }
+            jazzyMidi.push(ninth);
+            jazzyMidi.push(thirteenth);
+        }
+        else if (['maj7','min7'].includes(this.quality)) {
+            jazzyMidi.push(this.midiRoot+2);
+            //jazzyMidi.push(this.midiRoot+9);
+        }
+        jazzyMidi.sort();
+        return jazzyMidi;
+    }
+    create_random_melody() {
+        
+        var midiOctaves = [...this.jazzify()];
         for (let n of this.midi) {
             midiOctaves.push(n+12);
             //midiOctaves.push(n+24);
@@ -112,8 +136,6 @@ function go() {
     eval(editor.getValue());
     console.log(chordInput);
     var melody = new Melody(chordInput);
-    var aTune = melody.create_melody()
-    console.log(aTune);
     var numEighths = 0;
     var hits = []; // on which 8th notes each chord should play
     for (let c of chordInput) {
@@ -127,8 +149,14 @@ function go() {
 
     Tone.context.latencyHint = 'fastest';
     Tone.Transport.bpm.value = tempo;
+    var aTune;
     seq = new Tone.Sequence(function(time, idx)
     {
+        console.log(`idx = ${idx}`);
+        if (idx == 0) {
+            aTune = melody.create_melody();
+            console.log(aTune);
+        }
         melodyPlayer.triggerAttackRelease(aTune[idx],'8n');
         for (let i=0; i < chordInput.length; i++) {
             if (hits[i] === idx) {
