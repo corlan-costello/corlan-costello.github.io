@@ -11,13 +11,35 @@ const Melody = class {
     constructor(chords) {
         this.chords = chords;
     }
+    
+    static smooth_melody(midi) {
+        for (let i = 0; i < midi.length-1; i++) {
+            if (midi[i+1] - midi[i] > 12) {
+                midi[i+1] -= 12;
+            }
+            else if (midi[i+1] - midi[i] < -12) {
+                midi[i+1] += 12;
+            }
+            console.log(`delta: ${midi[i+1]-midi[i]}`);
+        }
+    }
+
+    static midi2note(midi) {
+        var notes = [];
+        for (let m of midi) {
+            notes.push(Tone.Frequency(m,"midi").toNote());
+        }
+        return notes;
+    }
 
     create_melody() {
-        var melodyNotes = [];
+        var melodyMidi = [];
         for (let chord of this.chords) {
-            melodyNotes = melodyNotes.concat(chord.create_melody());
+            var chordMidiMelody = chord.create_midi_melody();
+            melodyMidi = melodyMidi.concat(chordMidiMelody);
         }
-        return melodyNotes;
+        Melody.smooth_melody(melodyMidi);
+        return Melody.midi2note(melodyMidi);
     }
 };
 
@@ -46,18 +68,15 @@ const Chord = class {
         this.numMeasures = numMeasures;
         this.notes = [];
         this.midi = [];
-        var deltas = Chord.chordQuality2delta[this.quality];
+        this.deltas = Chord.chordQuality2delta[this.quality];
         this.midiRoot = root2midi(this.root);
-        for (const d of deltas) {
+        for (const d of this.deltas) {
             var noteMidi = d+this.midiRoot;
             this.midi.push(noteMidi);
             this.notes.push(Tone.Frequency(noteMidi,"midi").toNote());
         }
-        console.log(`this.midi = ${this.midi}`);
     }
-    create_melody() {
-        return this.create_random_melody();
-    }
+
     jazzify() {
         let ninth;
         let thirteenth;
@@ -78,19 +97,20 @@ const Chord = class {
         jazzyMidi.sort();
         return jazzyMidi;
     }
-    create_random_melody() {
-        
+    create_midi_melody() {
         var midiOctaves = [...this.jazzify()];
         for (let n of this.midi) {
+            midiOctaves.push(n-12)
             midiOctaves.push(n+12);
-            //midiOctaves.push(n+24);
+            midiOctaves.push(n+24);
         }
         midiOctaves.sort();
-        var melodyNotes = [];
+        var melodyMidi = [];
         for (let i = 0; i < this.numMeasures*8; i++) {
-            melodyNotes.push(Tone.Frequency(random_choice(midiOctaves),"midi").toNote());
+            var midiNote = random_choice(midiOctaves);
+            melodyMidi.push(midiNote);
         }
-        return melodyNotes;
+        return melodyMidi;
     }
 };
 
@@ -152,7 +172,6 @@ function go() {
     var aTune;
     seq = new Tone.Sequence(function(time, idx)
     {
-        console.log(`idx = ${idx}`);
         if (idx == 0) {
             aTune = melody.create_melody();
             console.log(aTune);
@@ -161,7 +180,6 @@ function go() {
         for (let i=0; i < chordInput.length; i++) {
             if (hits[i] === idx) {
                 console.log(hits[i]);
-                console.log(`${root2midi(chordInput[i].root)} still don't see it?!`);
                 console.log(chordInput[i].notes);
                 console.log(chordInput[i].midi);
                 const chordNotes = chordInput[i].notes
@@ -180,3 +198,66 @@ function go() {
 function stop() {
     seq.stop();
 }
+
+/*
+Giant Steps
+    new Chord("B","maj7",0.5),
+    new Chord("D","7",0.5),
+    new Chord("G","maj7",0.5),
+    new Chord("Bb","7",0.5),
+    new Chord("Eb","maj7",1),
+    new Chord("A","min7",0.5),
+    new Chord("D","7",0.5),
+    
+    new Chord("G","maj7",0.5),
+    new Chord("Bb","7",0.5),
+    new Chord("Eb","maj7",0.5),
+    new Chord("F#","7",0.5),
+    new Chord("B","maj7",1),
+    new Chord("F","min7",0.5),
+    new Chord("Bb","7",0.5),
+    
+    new Chord("Eb","maj7",1),
+    new Chord("A","min7",0.5),
+    new Chord("D","7",0.5),
+    new Chord("G","maj7",1),
+    new Chord("C#","min7",0.5),
+    new Chord("F#","7",0.5),
+    new Chord("B","maj7",1),
+    new Chord("F","min7",0.5),
+    new Chord("Bb","7",0.5),
+    new Chord("Eb","maj7",1),
+    new Chord("C#","min7",0.5),
+    new Chord("F#","7",0.5),
+
+Autumn Leaves
+    new Chord("C","min7",1),
+    new Chord("F","7",1),
+    new Chord("Bb","maj7",1),
+    new Chord("Eb","maj7",1),
+    new Chord("A","halfdim7",1),
+    new Chord("D","7",1),
+    new Chord("G","min7",2),
+
+    new Chord("C","min7",1),
+    new Chord("F","7",1),
+    new Chord("Bb","maj7",1),
+    new Chord("Eb","maj7",1),
+    new Chord("A","halfdim7",1),
+    new Chord("D","7",1),
+    new Chord("G","min7",2),
+
+    new Chord("A","halfdim7",1),
+    new Chord("D","7",1),
+    new Chord("G","min7",2),
+    new Chord("C","min7",1),
+    new Chord("F","7",1),
+    new Chord("Bb","maj7",1),
+    new Chord("Eb","maj7",1),
+    new Chord("A","halfdim7",1),
+    new Chord("D","7",1),
+    new Chord("G","min7",2),
+    new Chord("Eb","7",1),
+    new Chord("D","7",1),
+    new Chord("G","min7",2),
+*/
