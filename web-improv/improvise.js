@@ -12,13 +12,16 @@ const Melody = class {
         this.chords = chords;
     }
     
+    // 2 notes are at most an octave apart
     static smooth_melody(midi) {
         for (let i = 0; i < midi.length-1; i++) {
-            if (midi[i+1] - midi[i] > 12) {
-                midi[i+1] -= 12;
-            }
-            else if (midi[i+1] - midi[i] < -12) {
-                midi[i+1] += 12;
+            while (Math.abs(midi[i+1] - midi[i]) > 12) {
+                if (midi[i+1] - midi[i] > 12) {
+                    midi[i+1] -= 12;
+                }
+                else if (midi[i+1] - midi[i] < -12) {
+                    midi[i+1] += 12;
+                }
             }
             console.log(`delta: ${midi[i+1]-midi[i]}`);
         }
@@ -32,11 +35,46 @@ const Melody = class {
         return notes;
     }
 
+    static is_minor_5(chord1, chord2) {
+        let interval = (chord2.midiRoot - chord1.midiRoot + 12)%12;
+        return interval == 5 && chord1.quality == '7' && chord2.quality.indexOf('min') >= 0;
+    }
+
+    static add_b9_b13(chord) {
+        let jazzyMidi = [...chord.midi];
+        jazzyMidi.push(chord.midiRoot + 1);
+        jazzyMidi.push(chord.midiRoot + 8);
+        let midiCandidates = [...jazzyMidi];
+        for (let n of jazzyMidi) {
+            midiCandidates.push(n-12)
+            midiCandidates.push(n+12);
+            midiCandidates.push(n+24);
+        }
+        midiCandidates.sort();
+        return midiCandidates;
+    }
+
     create_melody() {
         var melodyMidi = [];
-        for (let chord of this.chords) {
-            var chordMidiMelody = chord.create_midi_melody();
-            melodyMidi = melodyMidi.concat(chordMidiMelody);
+        for (let i = 0; i < this.chords.length; i++) {
+            let chord = this.chords[i];
+            if (Melody.is_minor_5(chord,this.chords[(i+1)%this.chords.length])) {
+                let midiCandidates = Melody.add_b9_b13(chord);
+                for (let i = 0; i < chord.numMeasures*8; i++) {
+                    var midiNote = random_choice(midiCandidates);
+                    melodyMidi.push(midiNote);
+                }
+                let noteChoices = [];
+                for (let n of midiCandidates) {
+                    noteChoices.push(Tone.Frequency(n,"midi").toNote());
+                }
+                console.log("V in minor V-i")
+                console.log(noteChoices);
+            }
+            else {
+                var chordMidiMelody = chord.create_midi_melody();
+                melodyMidi = melodyMidi.concat(chordMidiMelody);
+            }
         }
         Melody.smooth_melody(melodyMidi);
         return Melody.midi2note(melodyMidi);
@@ -58,7 +96,7 @@ const Chord = class {
         "min7":[0,3,7,10],
         "7":[0,4,7,10],
         "maj7":[0,4,7,11],
-        "halfdim7":[0,3,6,10],
+        "halfdim":[0,3,6,10],
         "dim7":[0,3,6,9],
     };
 
@@ -70,6 +108,8 @@ const Chord = class {
         this.midi = [];
         this.deltas = Chord.chordQuality2delta[this.quality];
         this.midiRoot = root2midi(this.root);
+        console.log(`this.quality = ${this.quality}`)
+        console.log(`this.deltas = ${this.deltas}`)
         for (const d of this.deltas) {
             var noteMidi = d+this.midiRoot;
             this.midi.push(noteMidi);
@@ -94,12 +134,16 @@ const Chord = class {
             jazzyMidi.push(this.midiRoot+2);
             //jazzyMidi.push(this.midiRoot+9);
         }
+        else if (this.quality == 'halfdim') {
+            jazzyMidi.push(this.midiRoot+1);
+        }
         jazzyMidi.sort();
         return jazzyMidi;
     }
     create_midi_melody() {
-        var midiOctaves = [...this.jazzify()];
-        for (let n of this.midi) {
+        var jazzMidi = [...this.jazzify()];
+        var midiOctaves = [...jazzMidi];
+        for (let n of jazzMidi) {
             midiOctaves.push(n-12)
             midiOctaves.push(n+12);
             midiOctaves.push(n+24);
@@ -148,7 +192,7 @@ var p1 = new Tone.Players({
 
 chordPlayer.connect(chordVol);
 melodyPlayer.connect(melodyVol);
-// p1.connect(vol); note: vol is no longe defined
+// p1.connect(vol); note: vol is no longer defined
 
 var seq;
 var tempo = 300;
@@ -235,7 +279,7 @@ Autumn Leaves
     new Chord("F","7",1),
     new Chord("Bb","maj7",1),
     new Chord("Eb","maj7",1),
-    new Chord("A","halfdim7",1),
+    new Chord("A","halfdim",1),
     new Chord("D","7",1),
     new Chord("G","min7",2),
 
@@ -243,18 +287,18 @@ Autumn Leaves
     new Chord("F","7",1),
     new Chord("Bb","maj7",1),
     new Chord("Eb","maj7",1),
-    new Chord("A","halfdim7",1),
+    new Chord("A","halfdim",1),
     new Chord("D","7",1),
     new Chord("G","min7",2),
 
-    new Chord("A","halfdim7",1),
+    new Chord("A","halfdim",1),
     new Chord("D","7",1),
     new Chord("G","min7",2),
     new Chord("C","min7",1),
     new Chord("F","7",1),
     new Chord("Bb","maj7",1),
     new Chord("Eb","maj7",1),
-    new Chord("A","halfdim7",1),
+    new Chord("A","halfdim",1),
     new Chord("D","7",1),
     new Chord("G","min7",2),
     new Chord("Eb","7",1),
