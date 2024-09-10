@@ -26,7 +26,20 @@
     <div id="go" onclick="go()">play</div>
     <div id="stop" onclick="stop()">stop</div>
     <div id="editor">
+    /*  Click on the play button to hear an improvisation 
+        over the chord changes below.
+        Click on the stop button to stop. You can tinker 
+        with the chord changes below to have a new improvisation. 
+        Enjoy!
+    */
+
     tempo = 200;
+
+    /* Chord parameters: 
+        root: "C", "D", "Eb", "F#", etc
+        quality: "maj7", "min7", "7", "halfdim", "dim7", "maj", "min", "aug", "dim"
+        number of measures will the chord play
+    */
     chordInput = [
         new Chord("C","min7",1),
         new Chord("F","7",1),
